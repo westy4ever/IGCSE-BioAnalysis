@@ -1,5 +1,5 @@
 // ================================================================
-// PDF EXTRACTION & REVIEW MODAL (with console update after confirm)
+// PDF EXTRACTION & REVIEW MODAL (CORE/EXTENDED → Extended)
 // ================================================================
 let _pendingExtractedText = '';
 
@@ -74,7 +74,7 @@ async function detectSubjectFromExam() {
     }
 }
 
-// ========== renderConsole (shows CORE/EXTENDED, no mixed badge) ==========
+// ========== renderConsole (CORE/EXTENDED → EXTENDED) ==========
 function renderConsole(text) {
     const container = document.getElementById('question-console-rendered');
     if (!container) return;
@@ -84,10 +84,8 @@ function renderConsole(text) {
     }
     const lines = text.split('\n').filter(l => l.trim());
     container.innerHTML = lines.map(line => {
-        // Remove "(no shared stem)" from parent lines
         let cleaned = line.replace(/\(no shared stem\)/gi, '').replace(/:\s*\(no shared stem\)/i, ':').trim();
         cleaned = cleaned.replace(/:\s*$/, '');
-        // Replace [CORE/EXTENDED] with [EXTENDED] for display
         cleaned = cleaned.replace(/\[CORE\/EXTENDED\]/gi, '[EXTENDED]');
         
         let html = cleaned
@@ -108,7 +106,7 @@ function renderConsole(text) {
     }).join('');
 }
 
-// ========== AUTO EXTRACT (full original prompt, counting CORE/EXTENDED as Extended) ==========
+// ========== AUTO EXTRACT – UPDATED PROMPT (blank lines → placeholders) ==========
 async function autoExtract() {
     setExtractionStatus('extracting', 'EXTRACTING QUESTIONS...');
     isExtracting = true;
@@ -127,31 +125,34 @@ async function autoExtract() {
         const biologyRef = getBiologyRef();
         const syllabusForPrompt = syllabusParser.getStructuredForPrompt();
 
-        // ========== FULL ORIGINAL EXTRACTION PROMPT (shortened for brevity, but full in your original) ==========
-        // For space, I include the full prompt as in your working version.
-        // (Assume the full prompt is present here – it is identical to the one you had before.)
+        // ========== UPDATED EXTRACTION PROMPT (blank lines become placeholders) ==========
         const extractPrompt = `Read every page of this IGCSE exam paper carefully, including all diagrams, tables, and graphs.
 
-CRITICAL RULE FOR SUB-QUESTIONS — read this first:
+CRITICAL RULE FOR SUB-QUESTIONS:
 When a question has a stem (e.g. "The diagram shows a mitochondrion...") followed by sub-parts (a)(i), (a)(ii), (b) etc., you MUST copy the parent stem into EVERY sub-question line.
 CORRECT:  Q1(a)(i): The diagram shows a mitochondrion. State its function. [1 mark] ...
 WRONG:    Q1(a)(i): State its function. [1 mark] ...   ← MISSING the stem
-Never output a bare sub-part — always start with the full parent context.
+
+HANDLE BLANK ANSWER LINES (rows of dots, dashes, underscores):
+- Do NOT ignore them. Instead, convert them into fill‑in‑the‑blank placeholders.
+- Replace any sequence of 3 or more dots (........), dashes (----), or underscores (____) that appears as an answer space with the standard placeholder: "......................" (15 dots).
+- If the blank is inside a sentence (e.g., "Water moves by .............."), keep the original dots as they are – they are part of the question.
+- If the blank is on a separate line by itself, attach it to the previous sentence with a space before the placeholder.
+- For calculation questions that have blank answer lines, use "__________" or the same dot placeholder.
+- The goal is to make the extracted question text look like a fill‑in‑the‑blank question, with placeholders where the student would write.
 
 IGNORE COMPLETELY — do NOT include in any output:
-- Blank answer lines (rows of dots ........, dashes ----, or underscores ____)
 - Margin text: "DO NOT WRITE IN THIS MARGIN", "DO NOT WRITE OUTSIDE THE BOX"
 - "BLANK PAGE", "This page is intentionally left blank"
 - Page numbers (e.g. "19", "20")
 - Paper codes (e.g. "0610/41/M/J/25", "UCLES 2025")
 - "==End of OCR for page N==" markers
-- Any continuation dots or answer space formatting
 - Any reading or transcription of diagram labels, axis values, table data, or figure content — these are not part of the question text
 
-For EACH question and sub-part found, write ONE line in this EXACT format (all on one single line):
-Q[number]([part]): <complete question text only — no dots, no blanks> [X marks] [CORE or EXTENDED or CORE/EXTENDED] [Topic N.N SubtopicName]
+For EACH leaf sub-question (the deepest level that has marks assigned), write ONE line in this EXACT format:
+Q[number]([part]): <complete question text> [X marks] [CORE or EXTENDED] [Topic N.N SubtopicName]
 
-RULE: [X marks] is REQUIRED on every CHILD sub-question line. Count marks from the paper. Never omit.
+RULE: [X marks] is REQUIRED on every child sub-question line. Count marks from the paper. Never omit.
 
 PARENT QUESTION LINE — REQUIRED BEFORE EACH GROUP OF SUB-QUESTIONS:
 Output ONE bare parent line per main question number (Q1, Q2, Q3…) immediately before its sub-questions:
@@ -160,24 +161,22 @@ Example:  Q2: Chickens are birds that are bred by farmers. Table 2.1 shows chara
 If the main question has no shared stem (each sub-part is independent), still output: Q[number]:
 
 SUB-QUESTION LINES — one line per sub-part, immediately after the parent line:
-Q[number]([part]): <sub-question instruction only — do NOT repeat the parent stem here> [X marks] [CORE or EXTENDED or CORE/EXTENDED] [Topic N.N SubtopicName]
+Q[number]([part]): <sub-question instruction only — do NOT repeat the parent stem here> [X marks] [CORE or EXTENDED] [Topic N.N SubtopicName]
 Example:  Q2(a)(i): Calculate the percentage change in mean body mass. Give your answer to 3 s.f. [3 marks] [CORE] [Topic 18.3 Selection]
 
 CRITICAL — question text rules by question type:
-Always begin each line with Q[number]: or Q[number]([part]): exactly.
-- Each sub-question instruction is concise — it does NOT include the parent stem text.
-- MULTIPLE CHOICE: Write all options A, B, C, D in full with their text.
-- FILL IN THE BLANKS: Reproduce the sentence with .............. dots exactly where the blanks are.
+- MULTIPLE CHOICE: Write all options A, B, C, D with their full text. Example: Q3(a): Which feature is found in plant cells? A Cell wall B Mitochondria C Ribosome D Nucleus [1 mark] ...
+- FILL IN THE BLANKS: Reproduce the sentence with .............. dots exactly where the blanks are (the original dots or the placeholder).
 - COMPLETE THE TABLE: Describe the full table structure — all column headers, row labels, any given data already filled in, and mark empty cells as [blank].
-- CALCULATIONS: Include all given numerical values with units and the exact instruction.
-- DIAGRAMS / GRAPHS: Describe every axis title, axis scale/range, all labelled features, and key data values in square brackets.
-- Do NOT include answer lines, blank answer boxes, or answer-space formatting
+- CALCULATIONS: Include all given numerical values with units and the exact instruction. Example: Q5(b): The cell is 0.05 mm long. Calculate the length in micrometres. Show your working. [2 marks] ...
+- DIAGRAMS / GRAPHS: Describe every axis title, axis scale/range, all labelled features, and key data values in square brackets. Example: [Fig. 2 shows: x-axis = Time (minutes) 0–60; y-axis = Rate of photosynthesis (cm³/min) 0–5; data: rises from 0.5 at 0 min to 4.8 at 30 min then plateaus at 5.0]
+- Do NOT include answer lines, blank answer boxes, or answer-space formatting (except the placeholder for blanks)
 - Keep each question on ONE line
 
-CLASSIFICATION — Core vs Extended:
-Use [CORE/EXTENDED] when the sub-question contains BOTH a Core task AND an Extended task.
-Use [EXTENDED] when the entire question tests Extended/Supplement content only.
-Use [CORE] for all other questions.
+CLASSIFICATION — Core vs Extended (NO CORE/EXTENDED):
+- Use [EXTENDED] when the entire question tests Extended/Supplement content only.
+- Use [CORE] for all other questions.
+- If a question would previously be marked CORE/EXTENDED, mark it as [EXTENDED].
 
 Extended keywords → [EXTENDED]: water potential, plasmolysis, glucagon, fibrinogen, auxin, meiosis, mitosis, DNA base pairing, nephron, lymphocyte, phagocyte, eutrophication, codominance, test cross, FSH, LH, goblet cells, ciliated cells, cilia, mucus protect, pollen tube, oxygen debt, fermenter, restriction enzyme, vaccination mechanism, pyramid of energy comparison, percentage energy transfer, genetic variation, diabetes treatment (insulin injection/pump), antibiotic resistance mechanism, hydrophyte adaptation, xerophyte adaptation, monocotyledon features, dicotyledon features, cartilage function in breathing system, breathing rate control (CO2/brain), blood glucose regulation detail (mechanism of insulin/glucagon, named cells), transpiration factors, translocation, maltase and specific enzyme products (maltase→glucose, pepsin→amino acids), fermenter for industrial antibiotic/penicillin production (NOT yeast bread/biofuel which is Core), kingdoms of fungi/protoctista identification.
 
@@ -193,7 +192,7 @@ CRITICAL EXTENDED corrections (verified against Cambridge 0610 2026-2028 syllabu
 - Explaining eutrophication process (mechanism) → [EXTENDED] [Topic 20.3]
 - Selective breeding / artificial selection → [CORE] [Topic 18.3 Selection]  NOT Topic 21
 - Exercise effect on heart rate (with fig showing data/graph) → [Topic 9.2] NOT [Topic 11.1]
-- Septum separating oxygenated/deoxygenated blood = [CORE]; identifying atrioventricular valve = [EXTENDED] → use [CORE/EXTENDED] if question asks both
+- Septum separating oxygenated/deoxygenated blood = [CORE]; identifying atrioventricular valve = [EXTENDED] → mark as [EXTENDED] (was CORE/EXTENDED)
 - Balanced CHEMICAL equation for photosynthesis (6CO₂ + 6H₂O → C₆H₁₂O₆ + 6O₂) → [EXTENDED]  (word equation = Core)
 
 Core keywords → [CORE]: diffusion (basic), osmosis (basic), photosynthesis (word equation only), enzyme (basic role), food chain, carbon cycle, state/name/identify a fact, yeast in bread-making, yeast in biofuel/fermentation (basic use), basic blood glucose control (insulin lowers/glucagon raises), state what antibiotics kill (bacteria), name of genus/species in binomial system. NOTE: balanced CHEMICAL equation for respiration = [EXTENDED] (supplement only). Word equation for respiration = [CORE]. Balanced symbol equation = always [EXTENDED].
@@ -264,8 +263,6 @@ Q5(b): Name the two types of cells lining the airways and describe how they prot
 CLASSIFICATION RULES:
 - Classify based on the SPECIFIC CONCEPT tested, NOT the paper tier
 - Extended papers regularly contain Core sub-questions — label [CORE] if the concept is in the Core column
-- If a single sub-question clearly spans both Core and Extended content, use [CORE/EXTENDED]
-- This is a Cambridge IGCSE paper — use [CORE], [EXTENDED], or [CORE/EXTENDED] only
 - Default to [CORE] if genuinely uncertain
 - IMPORTANT TIER RULES:
   * Yeast in bread-making or biofuel production → [CORE]
@@ -284,7 +281,7 @@ ${detectedSubjectKey === "cambridge_biology_0610" || !detectedSubjectKey ? biolo
 ${syllabusForPrompt.substring(0, 12000)}
 
 Work through every page of the exam from first to last. Output EVERY parent question and EVERY sub-part.
-List every question and every sub-part. Do not skip any. One line per sub-question.`;
+List every question and every sub-part. Do not skip any. One line per leaf sub-question.`;
 
         const geminiPayload = {
             contents: [{ parts: [
@@ -308,15 +305,14 @@ List every question and every sub-part. Do not skip any. One line per sub-questi
         qLines.forEach(line => {
             if (/^Q\d+\([^)]+\)(?:\([^)]+\))*:.*?\[\d+\s*marks?\]/i.test(line)) {
                 if (line.includes('[CORE]')) coreCount++;
-                else if (line.includes('[EXTENDED]') || line.includes('[CORE/EXTENDED]')) extCount++;
+                else if (line.includes('[EXTENDED]')) extCount++;
             }
-            const m = line.match(/^Q([\d]+)\(([^)]+)\)(?:\(([^)]+)\))?(?:\(([^)]+)\))?\s*:.*?\[(CORE|EXTENDED|CORE\/EXTENDED)\]/);
+            const m = line.match(/^Q([\d]+)\(([^)]+)\)(?:\(([^)]+)\))?(?:\(([^)]+)\))?\s*:.*?\[(CORE|EXTENDED)\]/);
             if (m) {
                 let qid = m[1] + '(' + m[2] + ')';
                 if (m[3]) qid += '(' + m[3] + ')';
                 if (m[4]) qid += '(' + m[4] + ')';
-                let rawType = m[5];
-                let finalType = (rawType === 'CORE' ? 'Core' : 'Extended');
+                let finalType = (m[5] === 'CORE' ? 'Core' : 'Extended');
                 window.extractedClassifications[qid] = finalType;
                 const topicM = line.match(/\[(?:Topic )?([\d]+)\.([\d]+)[:\s–-]*([^\]]+)\]/);
                 if (topicM) {
@@ -340,7 +336,7 @@ List every question and every sub-part. Do not skip any. One line per sub-questi
     }
 }
 
-// ========== REVIEW MODAL FUNCTIONS ==========
+// ========== REVIEW MODAL (excludes parent lines) ==========
 function openReviewModal(extractedText) {
     if (!extractedText || !extractedText.trim()) {
         extractedText = document.getElementById('question-text')?.value || '';
@@ -359,17 +355,23 @@ function openReviewModal(extractedText) {
         if (subjectBadge) subjectBadge.textContent = currentSubject || 'Biology 0610';
 
         let coreN = 0, extN = 0;
-        const rows = lines.map((line, i) => {
-            let mFull = line.match(/^(Q[^:]+):\s*(.*?)\[(\d+)\s*marks?\]\s*\[(CORE|EXTENDED|CORE\/EXTENDED)\]\s*(?:\[Topic\s+([^\]]+)\])?/i);
+        const rows = [];
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            const marksMatch = line.match(/\[(\d+)\s*marks?\]/i);
+            if (!marksMatch) continue;
+            
+            let mFull = line.match(/^(Q[^:]+):\s*(.*?)\[(\d+)\s*marks?\]\s*\[(CORE|EXTENDED)\]\s*(?:\[Topic\s+([^\]]+)\])?/i);
             if (!mFull) {
-                const mNoMarks = line.match(/^(Q[^:]+):\s*(.*?)\s*\[(CORE|EXTENDED|CORE\/EXTENDED)\]\s*(?:\[Topic\s+([^\]]+)\])?/i);
-                if (mNoMarks) {
-                    const mMarks = line.match(/\[(\d+)\s*marks?\]|\((\d+)\s*marks?\)|\s(\d+)\s+marks?/i);
-                    const foundMarks = mMarks ? (mMarks[1]||mMarks[2]||mMarks[3]) : '?';
-                    mFull = [mNoMarks[0], mNoMarks[1], mNoMarks[2], foundMarks, mNoMarks[3], mNoMarks[4]];
+                const mFlex = line.match(/^(Q[^:]+):\s*(.*?)\s*\[(CORE|EXTENDED)\]\s*(?:\[Topic\s+([^\]]+)\])?/i);
+                if (mFlex) {
+                    const mMarks = line.match(/\[(\d+)\s*marks?\]/i);
+                    const foundMarks = mMarks ? mMarks[1] : '?';
+                    mFull = [mFlex[0], mFlex[1], mFlex[2], foundMarks, mFlex[3], mFlex[4]];
                 }
             }
-            if (!mFull) return '';
+            if (!mFull) continue;
+            
             const [, qid, qtext, marks, rawType, topic] = mFull;
             let type = (rawType.toUpperCase() === 'CORE' ? 'Core' : 'Extended');
             if (topic) {
@@ -390,19 +392,19 @@ function openReviewModal(extractedText) {
                 <option value="Extended" ${type==='Extended' ? 'selected' : ''}>🟠 Extended</option>
             `;
             const rowBg = type==='Core' ? '#eff6ff' : '#fff7ed';
-            return `<tr style="background:${rowBg};border-bottom:1px solid #f1f5f9" data-review-row="${i}">
+            rows.push(`<tr style="background:${rowBg};border-bottom:1px solid #f1f5f9" data-review-row="${rows.length}">
                 <td class="px-3 py-2 font-mono font-bold text-slate-700 dark:text-slate-300">${qid}</td>
                 <td class="px-3 py-2 text-slate-600 dark:text-slate-400">${preview}</td>
                 <td class="px-3 py-2 text-slate-500 dark:text-slate-400 text-[10px]">${topic||''}</td>
                 <td class="px-3 py-2">
-                    <select onchange="updateReviewType(${i},this.value,this)" class="text-[10px] font-bold px-2 py-1 rounded border w-full" style="background:${type==='Core'?'#2563eb':'#ea580c'};color:white">
+                    <select onchange="updateReviewType(${rows.length-1},this.value,this)" class="text-[10px] font-bold px-2 py-1 rounded border w-full" style="background:${type==='Core'?'#2563eb':'#ea580c'};color:white">
                         ${typeSel}
                     </select>
                 </td>
                 <td class="px-3 py-2 text-center text-slate-600 dark:text-slate-400 font-bold">${marks}</td>
-             <tr>`;
-        }).filter(Boolean).join('');
-        if (tbody) tbody.innerHTML = rows || '<tr><td colspan="5" class="px-3 py-4 text-center">No questions parsed.</td></tr>';
+              </tr>`);
+        }
+        if (tbody) tbody.innerHTML = rows.length ? rows.join('') : '<tr><td colspan="5" class="px-3 py-4 text-center">No leaf sub-questions found.ERC20</tr>';
         const cc = document.getElementById('review-core-count');
         const ec = document.getElementById('review-ext-count');
         if (cc) cc.textContent = coreN + ' Core';
@@ -421,13 +423,12 @@ function updateReviewType(rowIdx, newType, sel) {
     const lines = _pendingExtractedText.split('\n');
     let count = -1;
     for (let i = 0; i < lines.length; i++) {
-        if (lines[i].trim() && /^Q[^:]+:/i.test(lines[i])) count++;
+        if (lines[i].trim() && /^Q[^:]+:/i.test(lines[i]) && /\[\d+\s*marks?\]/i.test(lines[i])) count++;
         if (count === rowIdx) {
             const newTag = newType === 'Core' ? 'CORE' : 'EXTENDED';
             lines[i] = lines[i]
                 .replace(/\[CORE\]/g, '[__NEWTYPE__]')
                 .replace(/\[EXTENDED\]/g, '[__NEWTYPE__]')
-                .replace(/\[CORE\/EXTENDED\]/g, '[__NEWTYPE__]')
                 .replace('[__NEWTYPE__]', `[${newTag}]`);
             break;
         }
@@ -451,13 +452,13 @@ function closeReviewModal() {
     _pendingExtractedText = '';
 }
 
-// ========== FIXED confirmReviewAndAnalyse – updates console after confirm ==========
 function confirmReviewAndAnalyse() {
     window.extractedClassifications = {};
     window.extractedTopics = {};
     const qLines = _pendingExtractedText.split('\n');
     qLines.forEach(line => {
-        const m = line.match(/^Q([\d]+)\(([^)]+)\)(?:\(([^)]+)\))?(?:\(([^)]+)\))?\s*:.*?\[(CORE|EXTENDED|CORE\/EXTENDED)\]/);
+        if (!/\[\d+\s*marks?\]/i.test(line)) return;
+        const m = line.match(/^Q([\d]+)\(([^)]+)\)(?:\(([^)]+)\))?(?:\(([^)]+)\))?\s*:.*?\[(CORE|EXTENDED)\]/);
         if (m) {
             let qid = m[1] + '(' + m[2] + ')';
             if (m[3]) qid += '(' + m[3] + ')';
@@ -486,14 +487,10 @@ function confirmReviewAndAnalyse() {
         }
     });
     closeReviewModal();
-    
-    // --- UPDATE CONSOLE with final classifications ---
-    // Convert the pending text (which already has the updated tags) to ensure console shows final counts
+    // Refresh console with final classifications
     renderConsole(_pendingExtractedText);
-    // Also update the hidden textarea for consistency
     const qt = document.getElementById('question-text');
     if (qt) qt.value = _pendingExtractedText;
-    
     if (!uploadedFiles.ms) {
         showModal('Mark Scheme Required', 'Please upload the Mark Scheme PDF before confirming.');
         return;
