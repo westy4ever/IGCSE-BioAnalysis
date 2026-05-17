@@ -1,0 +1,281 @@
+/* ========== BioHub OS Base Styles ========== */
+:root {
+    --amoled: #000000;
+    --zinc-950: #09090b;
+    --zinc-900: #121214;
+    --zinc-800: #1e1e20;
+    --studypal-orange: #ff4500;
+    --border: #27272a;
+}
+body { font-family: 'Inter', sans-serif; background-color: var(--amoled); color: #f4f4f5; margin: 0; height: 100vh; display: flex; overflow: hidden; transition: background 0.3s, color 0.3s; }
+.sidebar { width: 72px; background-color: var(--amoled); border-right: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; padding: 24px 0; flex-shrink: 0; z-index: 100; transition: background 0.3s, border-color 0.3s; }
+.nav-item { width: 48px; height: 48px; margin-bottom: 16px; border-radius: 14px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; color: #52525b; position: relative; }
+.nav-item:hover { color: #fff; background: var(--zinc-900); }
+.nav-item.active { background: rgba(255, 69, 0, 0.15); color: var(--studypal-orange); box-shadow: inset 0 0 0 1px var(--studypal-orange); }
+.main-stage { flex-grow: 1; display: flex; flex-direction: column; min-width: 0; height: 100vh; }
+.page { display: none; height: calc(100vh - 64px); width: 100%; overflow: hidden; }
+.page.active { display: flex; flex-direction: column; }
+.dual-viewport { display: flex; flex: 1; overflow: hidden; }
+.pdf-pane { flex: 1; display: flex; flex-direction: column; border-right: 1px solid var(--border); height: 100%; }
+.scroll-container { flex: 1; overflow-y: auto; overflow-x: auto; padding: 40px 0; display: flex; flex-direction: column; align-items: center; background: #0a0a0a; }
+canvas { background: white; box-shadow: 0 0 40px rgba(0,0,0,0.7); max-width: 95%; height: auto !important; }
+.viewer-header { height: 48px; background: var(--zinc-950); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 16px; gap: 12px; flex-shrink: 0; }
+.media-group { display: flex; gap: 4px; background: var(--zinc-900); padding: 4px; border-radius: 8px; border: 1px solid var(--border); }
+.hub-btn { font-size: 9px; font-weight: 800; padding: 6px 10px; border-radius: 6px; background: var(--zinc-800); color: #a1a1aa; transition: 0.2s; cursor: pointer; }
+.hub-btn:hover { background: var(--studypal-orange); color: white; }
+.card-container { perspective: 1000px; width: 460px; height: 280px; cursor: pointer; }
+.card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.4s ease; transform-style: preserve-3d; }
+.card-inner.flipped { transform: rotateY(180deg); }
+.card-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; align-items: center; justify-content: center; padding: 40px; border-radius: 24px; border: 1px solid var(--border); text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+.card-front { background: var(--zinc-900); color: white; border: 2px solid #1e1e20; font-size: 1.2rem; font-weight: 600; }
+.card-back { background: var(--studypal-orange); color: white; transform: rotateY(180deg); font-size: 1.15rem; font-weight: 500; display: flex; flex-direction: column; gap: 8px; }
+.tool-btn { background: var(--zinc-800); border: 1px solid #333; color: #a1a1aa; padding: 6px 12px; border-radius: 6px; font-size: 10px; font-weight: 700; cursor: pointer; }
+.tool-btn:hover { border-color: var(--studypal-orange); color: white; }
+.primary-btn { background: var(--studypal-orange); color: white; font-weight: 700; padding: 14px; border-radius: 12px; width: 100%; cursor: pointer; transition: background 0.2s; }
+.primary-btn:hover { background: #e03d00; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: var(--studypal-orange); }
+
+/* ========== Dark Mode Overrides ========== */
+body.dark-mode {
+    background-color: #1a1a1a;
+    color: #f8fafc;
+}
+body.dark-mode .sidebar {
+    background-color: #000000;
+    border-right-color: #27272a;
+}
+body.dark-mode .nav-item:hover {
+    background: #1e1e20;
+}
+body.dark-mode .bg-white,
+body.dark-mode .bg-zinc-900,
+body.dark-mode .bg-slate-50,
+body.dark-mode .bg-slate-100,
+body.dark-mode .bg-indigo-50,
+body.dark-mode .bg-purple-50,
+body.dark-mode .bg-emerald-50,
+body.dark-mode .bg-amber-50,
+body.dark-mode .bg-blue-50,
+body.dark-mode .bg-orange-50,
+body.dark-mode .bg-red-50 {
+    background-color: #2d2d2d !important;
+    border-color: #404040 !important;
+    color: #e2e8f0 !important;
+}
+body.dark-mode .text-slate-900,
+body.dark-mode .text-slate-800,
+body.dark-mode .text-slate-700,
+body.dark-mode .text-slate-600,
+body.dark-mode .text-gray-800 {
+    color: #f8fafc !important;
+}
+body.dark-mode .text-slate-500,
+body.dark-mode .text-slate-400 {
+    color: #9ca3af !important;
+}
+body.dark-mode .border-slate-200,
+body.dark-mode .border-slate-100,
+body.dark-mode .border-zinc-800 {
+    border-color: #4b5563 !important;
+}
+body.dark-mode .file-input-label {
+    background: #2d2d2d;
+    border-color: #6b7280;
+    color: #a1a1aa;
+}
+body.dark-mode .file-input-label:hover {
+    border-color: var(--studypal-orange);
+    background: #1f1f23;
+}
+body.dark-mode .core-panel {
+    background: linear-gradient(to bottom, #1e3a8a, #2d2d2d);
+    border-left-color: #1d4ed8;
+}
+body.dark-mode .extended-panel {
+    background: linear-gradient(to bottom, #7c2d12, #2d2d2d);
+    border-left-color: #c2410c;
+}
+body.dark-mode .badge-core {
+    background: #1e3a8a;
+    color: #93c5fd;
+}
+body.dark-mode .badge-extended {
+    background: #7c2d12;
+    color: #fed7aa;
+}
+body.dark-mode .badge-current {
+    background: #1e3a8a;
+    color: #93c5fd;
+}
+body.dark-mode .badge-removed {
+    background: #7f1d1d;
+    color: #fecaca;
+}
+body.dark-mode .explanation-box {
+    background: #1f2937;
+    border-color: #374151;
+}
+body.dark-mode .mistakes-box {
+    background: #2a0f0f;
+    border-color: #7f1d1d;
+}
+body.dark-mode .analysis-header {
+    border-left-color: var(--studypal-orange);
+}
+body.dark-mode .tool-btn {
+    background: #1e1e20;
+    border-color: #3f3f46;
+    color: #a1a1aa;
+}
+body.dark-mode .tool-btn:hover {
+    border-color: var(--studypal-orange);
+    color: white;
+}
+body.dark-mode .primary-btn {
+    background: var(--studypal-orange);
+}
+body.dark-mode .primary-btn:hover {
+    background: #e03d00;
+}
+body.dark-mode .summary-table th {
+    background-color: #1f2937;
+    color: #9ca3af;
+}
+body.dark-mode .summary-table td {
+    border-bottom-color: #4b5563;
+}
+
+/* Core/Extended panel base styles (light mode) */
+.core-panel {
+    border-top: 5px solid #0284c7;
+    border-left: 3px solid #bae6fd;
+    background: linear-gradient(to bottom, #f0f9ff, white);
+}
+.extended-panel {
+    border-top: 5px solid #ea580c;
+    border-left: 3px solid #fed7aa;
+    background: linear-gradient(to bottom, #fff7ed, white);
+}
+.badge-core {
+    background-color: #dbeafe;
+    color: #1d4ed8;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+}
+.badge-extended {
+    background-color: #ffedd5;
+    color: #c2410c;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+}
+.badge-current {
+    background-color: #dbeafe;
+    color: #1d4ed8;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+}
+.badge-removed {
+    background-color: #fee2e2;
+    color: #991b1b;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+}
+.api-input-container { position: relative; display: flex; align-items: center; }
+.api-input { flex: 1; padding-right: 40px; }
+.eye-icon { position: absolute; right: 10px; cursor: pointer; color: #64748b; }
+.eye-icon:hover { color: #4f46e5; }
+.status-ready { color: #10b981; font-weight: bold; }
+.status-extracting { color: #f59e0b; font-weight: bold; animation: pulse 1.5s infinite; }
+.status-complete { color: #10b981; font-weight: bold; }
+.status-error { color: #ef4444; font-weight: bold; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+/* ========== REVIEW MODAL STYLES (fix readability) ========== */
+#review-modal .bg-zinc-900 {
+    background-color: #1e1e20 !important;
+}
+#review-modal .text-white {
+    color: #ffffff !important;
+}
+#review-modal .text-slate-400 {
+    color: #9ca3af !important;
+}
+#review-modal .border-zinc-800 {
+    border-color: #3f3f46 !important;
+}
+#review-modal .bg-zinc-800 {
+    background-color: #27272a !important;
+}
+#review-modal .text-slate-300 {
+    color: #d4d4d8 !important;
+}
+#review-modal .text-slate-600 {
+    color: #a1a1aa !important;
+}
+#review-modal .text-slate-700 {
+    color: #e4e4e7 !important;
+}
+#review-modal .bg-orange-900 {
+    background-color: #7c2d12 !important;
+    color: #fed7aa !important;
+}
+#review-modal .bg-orange-600 {
+    background-color: #ea580c !important;
+}
+#review-modal .hover\:bg-orange-700:hover {
+    background-color: #c2410c !important;
+}
+/* Light mode review modal overrides */
+body:not(.dark-mode) #review-modal .bg-zinc-900 {
+    background-color: #ffffff !important;
+    border-color: #e5e7eb !important;
+}
+body:not(.dark-mode) #review-modal .text-white {
+    color: #1f2937 !important;
+}
+body:not(.dark-mode) #review-modal .text-slate-400 {
+    color: #6b7280 !important;
+}
+body:not(.dark-mode) #review-modal .border-zinc-800 {
+    border-color: #e5e7eb !important;
+}
+body:not(.dark-mode) #review-modal .bg-zinc-800 {
+    background-color: #f3f4f6 !important;
+}
+body:not(.dark-mode) #review-modal .text-slate-300 {
+    color: #374151 !important;
+}
+body:not(.dark-mode) #review-modal .text-slate-600 {
+    color: #4b5563 !important;
+}
+body:not(.dark-mode) #review-modal .text-slate-700 {
+    color: #1f2937 !important;
+}
+body:not(.dark-mode) #review-modal .bg-orange-900 {
+    background-color: #fed7aa !important;
+    color: #9a3412 !important;
+}
+/* Table cells in review modal */
+#review-table-body td {
+    color: inherit !important;
+}
+#review-table-body select {
+    color: white !important;
+}
+body:not(.dark-mode) #review-table-body select {
+    color: white !important; /* keep white text on colored background */
+}
+@media print {
+    .no-print { display: none; }
+    body { background-color: white; color: black; }
+}

@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BioHub OS + IGCSE Processor v51</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="text-orange-600 font-black text-2xl mb-12">B</div>
+        <div class="nav-item active" onclick="nav('dash', this)" title="Dashboard">🏠</div>
+        <div class="nav-item" onclick="nav('explainer', this)" title="AI Explainer">🤖</div>
+        <div class="nav-item" onclick="nav('practice', this)" title="Dual Practice">📄</div>
+        <div class="nav-item" onclick="nav('flashcards', this)" title="Flashcards">📇</div>
+        <div class="nav-item" onclick="nav('processor', this)" title="IGCSE Processor">⚙️</div>
+    </aside>
+
+    <div class="main-stage">
+        <header class="h-16 border-b border-zinc-800 flex items-center px-8 justify-between bg-black">
+            <h2 id="header-title" class="text-xs font-bold tracking-widest text-zinc-500 uppercase">Dashboard</h2>
+            <button onclick="toggleDarkMode()" class="bg-slate-800 text-slate-300 px-3 py-2 rounded-xl font-bold text-xs uppercase hover:bg-orange-600 hover:text-white transition">🌙 Dark</button>
+        </header>
+
+        <!-- Dashboard Page -->
+        <section id="dash" class="page active p-12 overflow-y-auto">
+            <h1 class="text-4xl font-bold mb-8">System Metrics</h1>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl">
+                <div class="bg-zinc-900 border border-zinc-800 p-8 rounded-2xl">
+                    <p class="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">Saved AI Analyses</p>
+                    <h3 id="dash-insight-count" class="text-5xl font-bold mt-4 text-white">0</h3>
+                </div>
+                <div class="bg-zinc-900 border border-zinc-800 p-8 rounded-2xl">
+                    <p class="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">Active Flashcards</p>
+                    <h3 id="dash-card-count" class="text-5xl font-bold mt-4 text-orange-600">0</h3>
+                </div>
+                <div class="bg-zinc-900 border border-zinc-800 p-8 rounded-2xl">
+                    <p class="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">Processor Questions</p>
+                    <h3 id="dash-question-count" class="text-5xl font-bold mt-4 text-emerald-500">0</h3>
+                </div>
+            </div>
+        </section>
+
+        <!-- AI Explainer Page -->
+        <section id="explainer" class="page p-10 overflow-y-auto">
+            <div class="max-w-4xl mx-auto">
+                <h2 class="text-2xl font-bold mb-10">AI Exam Expert</h2>
+                <div class="mb-8">
+                    <div class="flex justify-between items-center mb-4">
+                        <label class="text-[10px] font-bold text-zinc-500 tracking-wider uppercase">1. Question Interface</label>
+                        <div class="media-group">
+                            <button onclick="document.getElementById('q-img-upload').click()" class="hub-btn">UPLOAD IMAGE</button>
+                            <button onclick="document.getElementById('q-img-ocr').click()" class="hub-btn">DIRECT OCR</button>
+                            <input type="file" id="q-img-upload" hidden onchange="handleMedia(this, 'ai-q', false)">
+                            <input type="file" id="q-img-ocr" hidden onchange="handleMedia(this, 'ai-q', true)">
+                        </div>
+                    </div>
+                    <textarea id="ai-q" class="w-full h-32 bg-zinc-900 p-6 rounded-2xl outline-none border border-zinc-800 focus:border-orange-600 transition text-sm" placeholder="Paste a past paper question..."></textarea>
+                </div>
+                <div class="mb-10">
+                    <div class="flex justify-between items-center mb-4">
+                        <label class="text-[10px] font-bold text-zinc-500 tracking-wider uppercase">2. Mark Scheme Guidance (Optional)</label>
+                        <div class="media-group">
+                            <button onclick="document.getElementById('ms-img-upload').click()" class="hub-btn">UPLOAD IMAGE</button>
+                            <button onclick="document.getElementById('ms-img-ocr').click()" class="hub-btn">DIRECT OCR</button>
+                            <input type="file" id="ms-img-upload" hidden onchange="handleMedia(this, 'ai-ms', false)">
+                            <input type="file" id="ms-img-ocr" hidden onchange="handleMedia(this, 'ai-ms', true)">
+                        </div>
+                    </div>
+                    <textarea id="ai-ms" class="w-full h-24 bg-zinc-900 p-6 rounded-2xl outline-none border border-zinc-800 focus:border-orange-600 transition text-sm" placeholder="Paste the mark scheme (optional)"></textarea>
+                </div>
+                <button onclick="executeAI()" class="primary-btn">Generate with Gemini + Syllabus</button>
+                <div id="ai-out-container" class="hidden mt-8 p-8 bg-zinc-950 rounded-2xl border border-zinc-800">
+                    <div id="ai-out-text" class="text-zinc-300 leading-relaxed text-sm"></div>
+                    <button onclick="commitInsight()" class="mt-6 text-[10px] font-bold text-orange-500 hover:underline tracking-widest uppercase">Save Analysis</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Dual Practice Page -->
+        <section id="practice" class="page">
+            <div class="dual-viewport">
+                <div class="pdf-pane">
+                    <div class="viewer-header">
+                        <button onclick="navigatePdf('qp', -1)" class="tool-btn">⬅️</button>
+                        <span id="qp-label" class="text-[10px] font-bold tracking-widest">PAGE 1</span>
+                        <button onclick="navigatePdf('qp', 1)" class="tool-btn">➡️</button>
+                        <button onclick="document.getElementById('in-qp').click()" class="tool-btn">LOAD QP PDF</button>
+                        <button onclick="analyseCurrentPage()" class="tool-btn bg-orange-600 !text-white">🤖 ANALYSE THIS PAGE</button>
+                        <input type="file" id="in-qp" hidden onchange="mountPDF(this, 'qp')">
+                    </div>
+                    <div class="scroll-container" id="qp-scroll"><canvas id="qp-canv"></canvas></div>
+                </div>
+                <div class="pdf-pane bg-zinc-950">
+                    <div class="viewer-header">
+                        <button onclick="navigatePdf('ms', -1)" class="tool-btn">⬅️</button>
+                        <span id="ms-label" class="text-[10px] font-bold tracking-widest">PAGE 1</span>
+                        <button onclick="navigatePdf('ms', 1)" class="tool-btn">➡️</button>
+                        <button onclick="toggleMSVisibility()" id="ms-toggle" class="ml-auto tool-btn bg-orange-600 !text-white">HIDE MARK SCHEME</button>
+                        <button onclick="document.getElementById('in-ms').click()" class="tool-btn">LOAD MS PDF</button>
+                        <input type="file" id="in-ms" hidden onchange="mountPDF(this, 'ms')">
+                    </div>
+                    <div class="scroll-container" id="ms-scroll"><canvas id="ms-canv"></canvas></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Flashcards Page -->
+        <section id="flashcards" class="page p-12 overflow-y-auto">
+            <div class="max-w-5xl mx-auto flex flex-col lg:flex-row gap-12 items-center justify-center h-full">
+                <div class="w-full lg:w-2/5 bg-zinc-900 p-8 rounded-3xl border border-zinc-800">
+                    <h3 class="text-xs font-bold text-zinc-500 mb-6 uppercase tracking-wider">Card Creator</h3>
+                    <div class="space-y-4">
+                        <div><label class="text-[10px] text-zinc-600 block mb-2 font-bold uppercase">Front Side</label><input id="fc-q" type="text" class="w-full bg-black border border-zinc-800 p-4 rounded-xl outline-none text-sm text-white focus:border-orange-500" placeholder="e.g., Define Osmosis"></div>
+                        <div><label class="text-[10px] text-zinc-600 block mb-2 font-bold uppercase">Back Side</label><textarea id="fc-a" class="w-full bg-black border border-zinc-800 p-4 rounded-xl h-32 outline-none text-sm text-white focus:border-orange-500" placeholder="e.g., Net movement of water molecules down a water potential gradient..."></textarea></div>
+                        <button onclick="createNewDeckCard()" class="primary-btn mt-2">Add to Deck</button>
+                        <button onclick="generateAIFlashcards()" class="mt-2 w-full bg-purple-700 hover:bg-purple-800 text-white font-bold py-3 rounded-xl transition text-sm">🤖 Generate AI Flashcards (Topic)</button>
+                    </div>
+                </div>
+                <div class="flex-1 flex flex-col items-center justify-center">
+                    <div class="card-container" onclick="this.querySelector('.card-inner').classList.toggle('flipped')">
+                        <div class="card-inner" id="card-obj">
+                            <div class="card-face card-front" id="display-q">No flashcards. Generate or create some!</div>
+                            <div class="card-face card-back" id="display-a">Use 'Generate AI Flashcards' or add manually.</div>
+                        </div>
+                    </div>
+                    <div class="flex gap-4 mt-10">
+                        <button onclick="shiftCard(-1)" class="tool-btn px-6 py-2">⬅️ PREV</button>
+                        <button onclick="shiftCard(1)" class="tool-btn px-6 py-2">NEXT ➡️</button>
+                        <button onclick="wipeFlashcards()" class="tool-btn border-red-900/50 text-red-500 hover:bg-red-950/20">WIPE ALL</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- IGCSE Processor Page -->
+        <section id="processor" class="page igcse-processor">
+            <div class="overflow-y-auto h-full p-8">
+                <div id="app" class="max-w-6xl mx-auto bg-zinc-900 rounded-3xl p-6 md:p-12 shadow-2xl border border-zinc-800">
+                    <!-- IGCSE Processor UI -->
+                    <div class="flex flex-col md:flex-row justify-between items-center mb-10 gap-4 border-b pb-8 border-zinc-800">
+                        <div><h1 class="text-4xl font-black text-slate-100 tracking-tight">Cambridge <span class="text-orange-500">Biology 0610</span></h1>
+                        <p class="text-slate-400 font-medium">IGCSE Past Paper Question Analyser · v51.1</p>
+                        <div class="flex gap-2 mt-2 flex-wrap"><span id="online-status" class="online-badge text-[10px] px-2 py-1 rounded-full">🟢 Online</span><span id="syllabus-parse-badge" class="bg-amber-800 text-amber-200 text-[10px] px-2 py-1 rounded-full">📚 No Syllabus</span><span id="exam-board-badge" class="hidden bg-indigo-900 text-indigo-200 text-[10px] px-2 py-1 rounded-full"></span></div></div>
+                        <div class="flex gap-2 flex-wrap">
+                            <button onclick="toggleDarkMode()" class="bg-zinc-800 text-slate-300 px-3 py-2 rounded-xl font-bold text-xs uppercase hover:bg-orange-600 hover:text-white transition">🌙 Dark</button>
+                            <button onclick="showStudyGuide()" class="bg-zinc-800 text-slate-300 px-3 py-2 rounded-xl font-bold text-xs uppercase hover:bg-orange-600 hover:text-white transition">📖 Study Guide</button>
+                            <button onclick="showSyllabusSummary()" class="bg-zinc-800 text-slate-300 px-3 py-2 rounded-xl font-bold text-xs uppercase hover:bg-orange-600 hover:text-white transition">🗂️ Syllabus</button>
+                            <button onclick="resetApplication()" class="bg-zinc-800 text-slate-300 px-3 py-2 rounded-xl font-bold text-xs uppercase hover:bg-rose-700 hover:text-white transition">Clear All</button>
+                        </div>
+                    </div>
+                    <!-- API Key & Subject Inputs -->
+                    <div class="bg-zinc-800 p-4 rounded-xl mb-6">
+                        <div class="flex justify-between items-center mb-2"><label class="block text-[10px] font-black text-orange-400 uppercase tracking-widest">Gemini API Key</label><span id="api-validation-badge" class="text-[10px] px-2 py-1 rounded-full bg-zinc-700 text-slate-300">Not Validated</span></div>
+                        <div class="api-input-container"><input type="password" id="api-key" class="api-input w-full p-3 bg-black border border-orange-800 rounded-xl outline-none transition font-mono text-sm text-white" placeholder="Paste AIza... key here" oninput="validateApiKeyInput(); saveApiKey(); checkInputs();"><span class="eye-icon" onclick="toggleApiKeyVisibility()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span></div>
+                        <div class="flex justify-between mt-2"><p class="text-[10px] text-orange-400">Get free key at <a href="https://makersuite.google.com/app/apikey" target="_blank" class="underline">Google AI Studio</a></p><button onclick="testAPIKey()" class="text-[10px] bg-orange-800 px-2 py-1 rounded">Test Key</button></div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                        <div><label class="block text-xs font-black text-slate-400 uppercase mb-2">Subject / Paper <span id="detection-status" class="text-emerald-600 text-[10px] ml-2 hidden">✓ Auto-detected</span></label><input type="text" id="subject" class="w-full p-4 bg-black border border-zinc-700 rounded-xl focus:border-orange-500 outline-none text-white" placeholder="e.g. Biology 0610/42/O/N/19" oninput="checkInputs();updateSubjectDetection(this.value)"><div class="mt-2 flex items-center gap-2"><span class="text-[10px] text-slate-400">Detected:</span><span id="subject-key-display" class="text-[10px] font-bold text-orange-500 bg-orange-950 px-2 py-0.5 rounded">—</span></div></div>
+                        <div><label class="block text-xs font-black text-slate-400 uppercase mb-2">Syllabus Topics <span id="syllabus-parse-status" class="text-[10px] text-slate-400"></span></label><textarea id="syllabus-structure" rows="10" class="w-full p-4 bg-black border border-zinc-700 rounded-xl text-sm focus:border-orange-500 outline-none font-mono text-slate-300" placeholder="Syllabus content will appear here after upload..." readonly></textarea><p class="text-[10px] text-slate-400 mt-1">⚠️ Built-in syllabus (2026-2028) always used.</p></div>
+                    </div>
+                    <!-- Question Console -->
+                    <div class="border border-zinc-800 rounded-2xl overflow-hidden bg-zinc-900 mb-8">
+                        <div class="bg-zinc-950 px-5 py-2 flex justify-between items-center border-b border-zinc-800"><span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Question Text Console <span class="text-[8px] font-normal text-slate-500">(🔵=Core 🟠=Extended 🏷️=Topic)</span></span><span id="extraction-status" class="text-[10px] font-bold text-slate-400 italic">⏳ WAITING FOR SYLLABUS</span><button id="review-classifications-btn" onclick="openReviewModal(document.getElementById('question-text')?.value||'')" class="hidden ml-2 text-[10px] bg-orange-600 text-white px-3 py-1 rounded-lg font-bold hover:bg-orange-700 transition">🔍 Review Classifications</button></div>
+                        <textarea id="question-text" class="hidden" readonly></textarea>
+                        <div id="question-console-rendered" class="w-full p-5 bg-transparent text-sm font-mono text-slate-300 overflow-y-auto min-h-[120px]" style="max-height:600px"><span class="text-slate-500 text-xs italic">After uploading the Exam PDF, questions will appear here annotated...</span></div>
+                    </div>
+                    <!-- File Uploads -->
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                        <div><label for="exam-pdf" id="exam-label" class="file-input-label flex flex-col items-center justify-center p-6 rounded-2xl h-32 text-center text-[10px] font-black uppercase tracking-widest border-2 border-zinc-700">📄 Exam PDF*</label><input type="file" id="exam-pdf" accept=".pdf" class="hidden" onchange="handleFile(this, 'exam-label', 'exam')"></div>
+                        <div><label for="ms-pdf" id="ms-label" class="file-input-label flex flex-col items-center justify-center p-6 rounded-2xl h-32 text-center text-[10px] font-black uppercase tracking-widest border-2 border-zinc-700">📝 Mark Scheme*</label><input type="file" id="ms-pdf" accept=".pdf" class="hidden" onchange="handleFile(this, 'ms-label', 'ms')"></div>
+                        <div><label for="syllabus-pdf" id="syllabus-label" class="file-input-label file-optional flex flex-col items-center justify-center p-6 rounded-2xl h-32 text-center text-[10px] font-black uppercase tracking-widest border-2 border-zinc-700">📚 Syllabus PDF<br><span class="text-[8px] normal-case font-normal mt-1">Optional — built-in</span></label><input type="file" id="syllabus-pdf" accept=".pdf" class="hidden" onchange="handleFile(this, 'syllabus-label', 'syllabus')"></div>
+                        <div><label for="comments-pdf" id="comments-label" class="file-input-label flex flex-col items-center justify-center p-6 rounded-2xl h-32 text-center text-[10px] font-black uppercase tracking-widest border-2 border-zinc-700 bg-zinc-800">💬 Teacher Comments (Optional)</label><input type="file" id="comments-pdf" accept=".pdf" class="hidden" onchange="handleFile(this, 'comments-label', 'comments')"></div>
+                    </div>
+                    <!-- Action Buttons -->
+                    <div class="flex gap-2 justify-center flex-wrap items-center mb-6">
+                        <button onclick="exportCSV()" class="text-xs bg-zinc-800 px-3 py-1.5 rounded-lg hover:bg-zinc-700 transition">📊 Export CSV</button>
+                        <button onclick="exportJSON()" class="text-xs bg-zinc-800 px-3 py-1.5 rounded-lg hover:bg-zinc-700 transition">📋 Export JSON</button>
+                        <button onclick="exportEditableHTML()" class="text-xs bg-emerald-700 text-white px-3 py-1.5 rounded-lg hover:bg-emerald-800 transition font-bold">📝 Editable HTML</button>
+                        <div class="flex items-center gap-1 flex-wrap"><select id="report-unit-filter" class="text-xs border border-zinc-700 rounded-lg px-2 py-1.5 bg-black text-white"><option value="all">All Questions</option><option value="Core">🔵 Core</option><option value="Extended">🟠 Extended</option></select><button onclick="printReport('exam')" class="text-xs bg-zinc-800 px-3 py-1.5 rounded-lg hover:bg-zinc-700 transition">🖨️ Print Exam</button><button onclick="printReport('topic')" class="text-xs bg-zinc-800 px-3 py-1.5 rounded-lg hover:bg-zinc-700 transition">🖨️ Print Topic</button><button onclick="downloadTextPDF('exam')" class="text-xs bg-slate-800 text-white px-3 py-1.5 rounded-lg hover:bg-slate-700 transition">📄 PDF Exam</button><button onclick="downloadTextPDF('topic')" class="text-xs bg-slate-800 text-white px-3 py-1.5 rounded-lg hover:bg-slate-700 transition">📄 PDF Topic</button><button onclick="printStudentReport('exam')" class="text-xs bg-indigo-900 text-indigo-200 px-3 py-1.5 rounded-lg hover:bg-indigo-800 transition">🎓 Report (Exam)</button><button onclick="printStudentReport('topic')" class="text-xs bg-violet-900 text-violet-200 px-3 py-1.5 rounded-lg hover:bg-violet-800 transition">🎓 Report (Topic)</button></div>
+                    </div>
+                    <button onclick="analyzeDocuments()" id="analyze-btn" class="w-full btn-primary font-black py-5 rounded-2xl uppercase tracking-widest shadow-xl disabled:opacity-50" disabled>Generate Analysis (Upload Syllabus First)</button>
+                    <!-- Results Area -->
+                    <div id="results-area" class="mt-16 hidden">
+                        <div id="stats-dashboard" class="grid grid-cols-4 gap-4 mb-6"></div>
+                        <div id="quick-study-guide" class="bg-zinc-900 p-4 rounded-xl border border-zinc-800 shadow-sm mb-6"><h4 class="text-xs font-bold uppercase mb-3">📋 Quick Study Guide</h4><div class="grid grid-cols-3 gap-3 text-center"><div class="bg-blue-950 p-2 rounded"><div class="text-lg font-bold text-blue-400" id="core-count">0</div><div class="text-[10px]">Core Questions</div><div class="text-[8px] text-slate-500">Must Study</div></div><div class="bg-orange-950 p-2 rounded"><div class="text-lg font-bold text-orange-400" id="extended-count">0</div><div class="text-[10px]">Extended Questions</div><div class="text-[8px] text-slate-500">Paper 4 Only</div></div><div class="bg-red-950 p-2 rounded"><div class="text-lg font-bold text-red-400" id="removed-count">0</div><div class="text-[10px]">Removed Content</div><div class="text-[8px] text-slate-500">Ignore</div></div></div></div>
+                        <div id="heatmap" class="bg-zinc-900 p-4 rounded-xl mb-6 hidden"><h4 class="text-xs font-bold uppercase mb-3">Difficulty Heatmap by Topic</h4><div id="heatmap-grid" class="grid grid-cols-5 gap-2"></div></div>
+                        <div id="recommendations" class="bg-purple-950 p-4 rounded-xl mb-6 hidden"><h4 class="text-xs font-bold uppercase mb-2 flex items-center gap-2">🎯 Smart Recommendations</h4><div id="recommendations-content" class="text-sm"></div></div>
+                        <div class="bg-zinc-900 p-4 rounded-xl mb-6"><div class="flex gap-3 items-center flex-wrap"><div class="flex-1"><input type="text" id="search-questions" placeholder="🔍 Search questions..." class="w-full p-2 border border-zinc-700 rounded-lg text-sm bg-black text-white" oninput="filterQuestions()"></div><select id="filter-type" class="text-sm p-2 border border-zinc-700 rounded-lg bg-black text-white" onchange="filterQuestions()"><option value="all">All Questions</option><option value="Core">Core Only</option><option value="Extended">Extended Only</option></select><select id="filter-status" class="text-sm p-2 border border-zinc-700 rounded-lg bg-black text-white" onchange="filterQuestions()"><option value="all">All Status</option><option value="removed">🟥 Removed</option><option value="current">✅ Current</option></select><select id="filter-difficulty" class="text-sm p-2 border border-zinc-700 rounded-lg bg-black text-white" onchange="filterQuestions()"><option value="all">All Difficulties</option><option value="Easy">Easy</option><option value="Medium">Medium</option><option value="Hard">Hard</option></select></div></div>
+                        <div id="summary-section" class="bg-zinc-900 p-8 rounded-3xl border border-zinc-800 shadow-sm mb-12"><div class="flex justify-between items-center mb-6 flex-wrap gap-3"><h2 class="text-xl font-black text-slate-100" id="summary-heading">Summary by Topic</h2><div class="flex gap-2 items-center"><span class="text-xs text-slate-500 font-semibold uppercase tracking-wide">Sort:</span><button id="sort-exam-btn" onclick="setSummarySort('exam')" class="text-xs font-bold px-3 py-1.5 rounded-lg bg-orange-600 text-white transition">📋 Exam Order</button><button id="sort-topic-btn" onclick="setSummarySort('topic')" class="text-xs font-bold px-3 py-1.5 rounded-lg bg-zinc-800 text-slate-300 hover:bg-orange-600 transition">📚 Topic Order</button></div></div><div class="overflow-hidden rounded-xl border border-zinc-800"><table class="w-full summary-table"><thead><tr><th>Topic</th><th class="min-w-[250px]">Sub-Questions</th><th>Total Marks</th><th>Weighting</th><th>Type</th><th>Status</th></tr></thead><tbody id="summary-body"></tbody></table></div></div>
+                        <div id="loading" class="text-center p-20 bg-zinc-900 rounded-3xl border border-zinc-800 mb-10 hidden"><div class="animate-spin inline-block w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full mb-6"></div><p id="loading-text" class="text-orange-400 font-black uppercase text-xs tracking-widest">Processing with Gemini...</p></div>
+                        <div id="restore-banner" style="display:none" class="mb-4 p-3 bg-blue-950 border border-blue-800 rounded-xl flex justify-between items-center"><span class="text-xs text-blue-300">📂 Restored your last session's edits</span><button onclick="clearRestoredSession()" class="text-xs text-blue-400 hover:text-blue-300 underline">Clear</button></div>
+                        <div id="analysis-container" class="space-y-8"></div>
+                    </div>
+                </div>
+                <!-- IGCSE Processor Modals -->
+                <div id="custom-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 transition-opacity duration-300 opacity-0 pointer-events-none"><div class="bg-zinc-900 p-6 rounded-xl shadow-2xl w-full max-w-sm"><h3 id="modal-title" class="text-xl font-bold text-white mb-4"></h3><p id="modal-message" class="text-slate-300 mb-6 whitespace-pre-line"></p><button onclick="closeModal()" class="w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold py-2 rounded-lg">OK</button></div></div>
+                <!-- REVIEW MODAL with proper text colors -->
+                <div id="review-modal" class="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center" style="display:none">
+                    <div class="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-3xl mx-4 max-h-[85vh] flex flex-col">
+                        <div class="px-6 py-4 border-b border-slate-200 dark:border-zinc-800 flex justify-between items-center">
+                            <div>
+                                <h2 class="font-black text-lg text-slate-900 dark:text-white">🔍 Review Classifications</h2>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Edit before locking — changes here override Gemini's output</p>
+                            </div>
+                            <span id="review-subject-badge" class="text-xs bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-200 px-3 py-1 rounded-full font-bold"></span>
+                        </div>
+                        <div class="overflow-y-auto flex-1 px-6 py-4">
+                            <table class="w-full text-xs border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-50 dark:bg-zinc-800 text-left">
+                                        <th class="px-3 py-2 font-bold text-slate-600 dark:text-slate-300 w-20">Q ID</th>
+                                        <th class="px-3 py-2 font-bold text-slate-600 dark:text-slate-300">Question Preview</th>
+                                        <th class="px-3 py-2 font-bold text-slate-600 dark:text-slate-300 w-28">Topic</th>
+                                        <th class="px-3 py-2 font-bold text-slate-600 dark:text-slate-300 w-36">Type</th>
+                                        <th class="px-3 py-2 font-bold text-slate-600 dark:text-slate-300 w-14">Marks</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="review-table-body" class="text-slate-700 dark:text-slate-300"></tbody>
+                            </table>
+                        </div>
+                        <div class="px-6 py-4 border-t border-slate-200 dark:border-zinc-800 flex justify-between items-center">
+                            <div class="text-xs text-slate-500 dark:text-slate-400">
+                                <span id="review-core-count" class="text-blue-600 dark:text-blue-400 font-bold"></span>
+                                <span id="review-ext-count" class="text-orange-600 dark:text-orange-400 font-bold ml-3"></span>
+                                <span id="review-mixed-count" class="text-purple-600 dark:text-purple-400 font-bold ml-3"></span>
+                            </div>
+                            <div class="flex gap-3">
+                                <button onclick="closeReviewModal()" class="text-xs px-4 py-2 border border-slate-300 dark:border-zinc-700 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-700 dark:text-slate-300">Cancel</button>
+                                <button onclick="confirmReviewAndAnalyse()" class="text-xs px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-bold">✅ Confirm & Analyse</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/globals.js"></script>
+    <script src="js/syllabus.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/extract.js"></script>
+    <script src="js/analysis.js"></script>
+    <script src="js/export.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/init.js"></script>
+    <script src="js/biohub.js"></script>
+</body>
+</html>
