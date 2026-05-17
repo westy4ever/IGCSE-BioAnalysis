@@ -1,5 +1,5 @@
 // ================================================================
-// CORE ANALYSIS & RENDERING (with full model answer and mark scheme)
+// CORE ANALYSIS & RENDERING (with removed questions in summary, exhaustive model answer)
 // ================================================================
 async function analyzeDocuments() {
     if (isAnalyzing) { showModal('Please Wait', 'Analysis already in progress.'); return; }
@@ -104,7 +104,15 @@ Only include a parent (e.g. Q1(a)) if it has NO further sub-parts.
   ℹ️ examiner note (e.g. "must refer to...", "allow ecf", "ignore...")
   Put each point on its own line. Do not use paragraphs or commas to chain points.
 
-- model: string — Write a comprehensive model answer derived STRICTLY from the mark scheme and Cambridge 0610 syllabus. Include EVERY relevant biological point from the mark scheme AND every related point from the syllabus for this subtopic. Use **bold** for key biological terms. If the question involves calculation, write numbered steps (e.g., "Step 1: ... Step 2: ...") using the format **Step 1:**, etc.
+- model: string — Write a comprehensive model answer derived STRICTLY from the mark scheme and Cambridge 0610 syllabus. 
+  **CRITICAL INSTRUCTIONS FOR MODEL ANSWER:**
+  1. IGNORE all quantity limiters. Do NOT limit yourself to "two", "three", "any two from", "any six from", etc. Include EVERY relevant biological point from the mark scheme AND every related point from the syllabus for this subtopic.
+  2. For each marking point, expand with the full biological explanation as the syllabus requires.
+  3. Use command-word conventions: Calculate → numbered working steps. Compare → explicit similarities AND differences. Explain → cause→mechanism→effect chain. Describe → sequential observable steps.
+  4. Bold key biological terms with **term**.
+  5. Write as flowing prose. No bullet points.
+  6. If the mark scheme has 6 possible points but the question says "state two", still write all 6 — the student uses this to revise every possible answer.
+  7. For calculations, present numbered steps (Step 1: ... Step 2: ...).
 
 - explanation: string — a thorough paragraph explaining the underlying biology concept being tested.
 - steps: string — ALWAYS empty string "".
@@ -141,14 +149,14 @@ Return ONLY a valid JSON array. No markdown, no code fences, no extra text befor
         try{results=JSON.parse(anaRaw);}catch(e1){try{results=JSON.parse(sanitiseJSON(anaRaw));}catch(e2){const m=anaRaw.match(/\[[\s\S]*\]/);if(!m)throw new Error('Gemini did not return a JSON array.');try{results=JSON.parse(m[0]);}catch(e3){results=JSON.parse(sanitiseJSON(m[0]));}}}
         if (!Array.isArray(results)) throw new Error('API response is not an array');
 
-        // ========== Only keep leaf sub-questions (those with marks > 0) ==========
+        // Only keep leaf sub-questions (those with marks > 0)
         let leafResults = results.filter(q => {
             const hasMarks = q.marks && parseInt(q.marks) > 0;
             const hasText = q.text && q.text.trim().length > 0;
             return hasMarks && hasText;
         });
 
-        // Apply locked classifications from review modal
+        // Apply locked classifications
         const locked = window.extractedClassifications || {};
         const lockMisses = [];
         leafResults = leafResults.map(q => {
@@ -338,13 +346,14 @@ function compareQIDs(a, b) {
     return 0;
 }
 
+// ========== UPDATED renderSummary – includes removed questions ==========
 function renderSummary(data, paperCode) {
-    const activeData = data.filter(q => q.syllabusStatus !== 'removed');
+    // DO NOT filter out removed questions – show them with a "Removed" badge
     const stats = {};
     const keyOrder = [];
     let totalMarks = 0;
 
-    activeData.forEach(q => {
+    data.forEach(q => {
         const key = q.subtopicId ? q.subtopicId : (q.topic || 'Other');
         if (!stats[key]) {
             const tNum = q.subtopicId ? parseInt(q.subtopicId.split('.')[0]) : 0;
@@ -377,13 +386,17 @@ function renderSummary(data, paperCode) {
     function buildPills(questions) {
         const sorted = [...questions].sort((a, b) => compareQIDs(a.qID, b.qID));
         return sorted.map(q => {
-            const pc = q.type === 'Core' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700';
+            let pc = '';
+            if (q.status === 'removed') pc = 'bg-red-100 text-red-700';
+            else pc = q.type === 'Core' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700';
             return '<span class="inline-block ' + pc + ' text-[9px] font-bold px-1.5 py-0.5 rounded mr-0.5 mb-0.5">'
                 + paperPrefix + 'Q' + q.qID + '</span>';
         }).join('');
     }
 
-    function buildTypePills(types) {
+    function buildTypePills(types, statuses) {
+        const hasRemoved = statuses.includes('removed');
+        if (hasRemoved) return '<span class="badge-removed">Removed</span>';
         const coreN = types.filter(t => t === 'Core').length;
         const extN = types.filter(t => t === 'Extended').length;
         if (coreN > 0 && extN > 0) {
@@ -420,13 +433,12 @@ function renderSummary(data, paperCode) {
                 + (tNum ? 'Topic ' + tNum + '. ' + tm.canonicalTopicName : tm.canonicalTopicName)
                 + '</div>'
                 + (subList ? '<div class="text-[9px] text-slate-500 mt-0.5">Sub-topics: ' + subList + '</div>' : '');
-            const hasRemoved = tm.statuses.includes('removed');
-            const statusBadge = hasRemoved ? '<span class="badge-removed">⚠️ Removed</span>' : '<span class="badge-current">✅</span>';
+            const statusBadge = tm.statuses.includes('removed') ? '<span class="badge-removed">⚠️ Removed</span>' : '<span class="badge-current">✅</span>';
             return '<tr><td class="align-top">' + topicLabel + '</td>'
                 + '<td class="sub-questions-cell">' + buildPills(tm.questions) + '</td>'
                 + '<td class="font-bold text-center">' + tm.marks + '</td>'
                 + '<td class="text-center">' + pct + '%</td>'
-                + '<td class="text-center">' + buildTypePills(tm.types) + '</td>'
+                + '<td class="text-center">' + buildTypePills(tm.types, tm.statuses) + '</td>'
                 + '<td class="text-center">' + statusBadge + '</td>'
                 + '</tr>';
         }).join('');
@@ -441,20 +453,19 @@ function renderSummary(data, paperCode) {
                     + '<div class="text-[9px] text-slate-500 mt-0.5">Sub-topic: '
                     + st.subtopicId + ' ' + st.canonicalSubName + '</div>'
                 : '<div class="text-[10px] font-bold text-slate-700">' + st.canonicalTopicName + '</div>';
-            const hasRemoved = st.statuses.includes('removed');
-            const statusBadge = hasRemoved ? '<span class="badge-removed">⚠️ Removed</span>' : '<span class="badge-current">✅</span>';
+            const statusBadge = st.statuses.includes('removed') ? '<span class="badge-removed">⚠️ Removed</span>' : '<span class="badge-current">✅</span>';
             return '<tr><td class="align-top">' + topicLabel + '</td>'
                 + '<td class="sub-questions-cell">' + buildPills(st.questions) + '</td>'
                 + '<td class="font-bold text-center">' + st.marks + '</td>'
                 + '<td class="text-center">' + pct + '%</td>'
-                + '<td class="text-center">' + buildTypePills(st.types) + '</td>'
+                + '<td class="text-center">' + buildTypePills(st.types, st.statuses) + '</td>'
                 + '<td class="text-center">' + statusBadge + '</td>'
                 + '</tr>';
         }).join('');
     }
 }
 
-// ========== CARD RENDERING WITH FULL MODEL ANSWER (step‑by‑step, bold, numbered steps) ==========
+// ========== renderCards – includes model answer with step-by-step formatting ==========
 function renderCards(data, paperCode) {
     const container = document.getElementById('analysis-container');
     if (!container) return;
@@ -468,7 +479,6 @@ function renderCards(data, paperCode) {
         const studyIcon = isCore ? '🔵' : '🟠';
         const studyNote = isCore ? '🔵 Core only' : '🟠 Extended only';
         
-        // Fix duplicate sub-question label
         let cleanText = p.text || '';
         cleanText = cleanText.replace(/^(Q\d+\([^)]+\)(?:\([^)]+\))*):\s*\(\1\):\s*/i, '$1: ');
         cleanText = cleanText.replace(/^(Q\d+(?:\([^)]+\))+):\s*(\([^)]+\)):/i, '$1: ');
@@ -849,7 +859,7 @@ function renderQuestionText(text) {
             if(!drows.length)continue;
             const pc=l=>l.replace(/^\s*\|/,'').replace(/\|\s*$/,'').split('|').map(s=>s.trim());
             let tbl='<table style="border-collapse:collapse;font-size:11px;margin:6px 0;width:auto">';
-            drows.forEach((l,ri)=>{const cells=pc(l);tbl+='<tr>';cells.forEach(cell=>{const tag=ri===0?'th':'td';const sty=ri===0?'background:#1e293b;color:white;padding:4px 10px;font-weight:700;font-size:10px;border:1px solid #334155':'padding:4px 10px;border:1px solid #cbd5e1;font-size:11px;background:white';tbl+=`<${tag} style="${sty}">${cell||'&nbsp;'}</${tag}>`;});tbl+='<tr>';});
+            drows.forEach((l,ri)=>{const cells=pc(l);tbl+='<tr>';cells.forEach(cell=>{const tag=ri===0?'th':'td';const sty=ri===0?'background:#1e293b;color:white;padding:4px 10px;font-weight:700;font-size:10px;border:1px solid #334155':'padding:4px 10px;border:1px solid #cbd5e1;font-size:11px;background:white';tbl+=`<${tag} style="${sty}">${cell||'&nbsp;'}</${tag}>`;});tbl+='</tr>';});
             tbl+='</table>'; out+=tbl;
         } else { out+=(line||'')+'<br>'; i++; }
     }
